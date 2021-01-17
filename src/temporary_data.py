@@ -27,7 +27,7 @@ def create_temporary_data():
     
     model = Mongo()
 
-    for i in tqdm(range(50000)):
+    for i in tqdm(range(400000)):
         document = {}
 
         performance_list = ["low", "mid", "high"]
