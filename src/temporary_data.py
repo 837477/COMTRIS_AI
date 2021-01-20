@@ -99,7 +99,7 @@ def create_temporary_data():
             "performance": performance
         }
 
-        model.cursor()['test_pc'].insert_one(pc)
+        model.cursor()['temporary_data'].insert_one(pc)
 
 
 if __name__ == "__main__":
