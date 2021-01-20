@@ -34,7 +34,7 @@ class Mongo():
 db = Mongo()
 
 # 학습 데이터 로드 ###############################################################
-train_list = list(db.cursor()['test_pc'].find({}, {"_id": 0, "performance": 0}))
+train_list = list(db.cursor()['temporary_data'].find({}, {"_id": 0, "performance": 0}))
 
 total_data_cnt = len(train_list)
 learning_data_cnt = int(len(train_list) * 0.7)
