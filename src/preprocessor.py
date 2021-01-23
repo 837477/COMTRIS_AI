@@ -81,7 +81,7 @@ class RegexPreprocessor():
     def ram(self, text):
         brand = re.findall("삼성전자|ADATA|G.SKILL|GeIL|ACPI|AFOX|AVEXIR|Antec|Apacer|CORSAIR|CYNEX|Dreamware|EKMEMORY|ESSENCORE|GIGABYTE|GLOWAY|GSMS|HP|INNO3D|KINGMAX|LANSON|OCPC|OLOy|PATRIOT|PNY|SK하이닉스|TeamGroup|Terabyte|V-Color|ZADAK|갤럭시|건평정보통신|디자인|마이크론|실리콘파워|써멀테이크|어드반|오존컴퍼니|이메이션|킹스톤|타무즈|트랜센드", text)
         chipset = re.findall("\d{5}|\d{4}", text)
-        volume = re.findall("\d{1,2}GB|\d{1,2}gb", text)
+        volume = re.findall("\d{1,2}GB|\d{1,2}gb|\d{1,2}G|\d{1,2}g", text)
 
         if not (brand + chipset + volume):
             return None
