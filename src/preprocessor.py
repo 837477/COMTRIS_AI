@@ -66,7 +66,7 @@ class RegexPreprocessor():
         if (not chipset):
             return None
         
-        return brand[0] + " " + chipset[0].replace(" ", "")
+        return chipset[0].replace(" ", "")
 
 
     def mb(self, text):
@@ -76,7 +76,7 @@ class RegexPreprocessor():
         if (not chipset):
             return None
         
-        return brand[0] + " " + chipset[0]
+        return chipset[0]
     
     def ram(self, text):
         # brand = re.findall("삼성전자|ADATA|G.SKILL|GeIL|ACPI|AFOX|AVEXIR|Antec|Apacer|CORSAIR|CYNEX|Dreamware|EKMEMORY|ESSENCORE|GIGABYTE|GLOWAY|GSMS|HP|INNO3D|KINGMAX|LANSON|OCPC|OLOy|PATRIOT|PNY|SK하이닉스|TeamGroup|Terabyte|V-Color|ZADAK|갤럭시|건평정보통신|디자인|마이크론|실리콘파워|써멀테이크|어드반|오존컴퍼니|이메이션|킹스톤|타무즈|트랜센드", text)
@@ -98,7 +98,7 @@ class RegexPreprocessor():
                 volume[idx] = int(volume[idx])
             volume[0] = str(max(volume)) + "GB"
 
-        return brand[0] + " " + chipset[0] + " " + volume[0]
+        return chipset[0] + " " + volume[0]
 
     def ssd(self, text):
         # brand = re.findall("삼성전자|마이크론|ADATA|Western Digital|ACPI|AFOX|ASUS|AVEXIR|Apacer|Axxen|BIOSTAR|BIWIN|BLUE-I|COLORFUL|COOLERTEC|CORSAIR|CRAFT|DATARAM|DIGIFAST|DIGISTOR|EAGET|EKMEMORY|ESSENCORE|EVERCOOL|EXASCEND|FOXCONN|Faspeed|GIGABYTE|GLOWAY|GeIL|GrinMax|HGST|HIKVISION|HP|ICY DOCK|IPT|JEYI|KINGMAX|Kim MiDi|Kimtigo|KingDian|KingSpec|Korlet|Lexar|Lite-On|Longsys|MAIWO|MARSHAL|MK2|MUSHKIN|MiSD|MyDigitalSSD|MySSD|NCTOP|NOFAN|Netac|OCPC|OCZ SS|ORICO|OWC|PALIT|PATRIOT|PHINOCOM|PNY|Plextor|RAMIS|RiTEK|SK하이닉스|SONY|STARSWAY|STCOM|SUNEAST|Sandisk|Seagate|SilverStone|Supertalent|Synology|TCSUNBOW|TOPDISK|TeamGroup|Toshiba|UNITEK|Union Memory|VIA|Vaseky|VisionTek|ZOTAC|innoDisk", text)
@@ -107,7 +107,7 @@ class RegexPreprocessor():
         if (not volume):
             return None
         
-        return brand[0] + " " + volume[0].upper()
+        return volume[0].upper()
     
     def power(self, text):
         regex_result = re.findall("\d{3,4}W|\d{3,4}w|\d{3,4}", text)
