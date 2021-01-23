@@ -61,12 +61,12 @@ class RegexPreprocessor():
     
     def vga(self, text):
         # brand = re.findall("GAINWARD|이엠텍|MSI|ZOTAC|갤럭시|ASUS|GIGABYTE|PowerColor|리드텍|AFOX|AKiTiO|AMD|ARKTEK|ASRock|ATUM|AXLE|COLORFUL|EVGA|FORSA|HIS|INNO3D|MANLI|MAXSUN|NETSTOR|NVIDIA|PALIT|PNY|Razer|SAPPHIRE|SNK테크|SOYO|Sonnet|TAGER|XFX|레노버|매트록스|세컨드찬스|엠탑코리아", text)
-        chipset = re.findall("GTX\d{3,4}SUPER|GTX \d{3,4}SUPER|GTX\d{3,4} SUPER|GTX \d{3,4} SUPER|GTX\d{3,4}Ti|GTX \d{3,4}Ti|GTX\d{3,4} Ti|GTX \d{3,4} Ti|GTX\d{3,4}TI|GTX \d{3,4}TI|GTX\d{3,4} TI|GTX \d{3,4} TI|GTX\d{3,4}|GTX \d{3,4}|RTX\d{3,4}|RTX \d{3,4}|RTX\d{3,4}SUPER|RTX \d{3,4}SUPER|RTX\d{3,4} SUPER|RTX \d{3,4} SUPER|RTX\d{3,4}Ti|RTX \d{3,4}Ti|RTX\d{3,4} Ti|RTX \d{3,4} Ti|RX\d{3,4}XT|RX \d{3,4}XT|RX\d{3,4} XT|RX \d{3,4} XT|RX\d{3,4}|RX \d{3,4}", text)
+        chipset = re.findall("GTX\d{3,4}SUPER|GTX \d{3,4}SUPER|GTX\d{3,4} SUPER|GTX \d{3,4} SUPER|GTX\d{3,4}Ti|GTX \d{3,4}Ti|GTX\d{3,4} Ti|GTX \d{3,4} Ti|GTX\d{3,4}TI|GTX \d{3,4}TI|GTX\d{3,4} TI|GTX \d{3,4} TI|GTX\d{3,4}|GTX \d{3,4}|RTX\d{3,4}|RTX \d{3,4}|RTX\d{3,4}super|RTX \d{3,4}super|RTX\d{3,4} super|RTX \d{3,4} super|RTX\d{3,4}SUPER|RTX \d{3,4}SUPER|RTX\d{3,4} SUPER|RTX \d{3,4} SUPER|RTX\d{3,4}Ti|RTX \d{3,4}Ti|RTX\d{3,4} Ti|RTX \d{3,4} Ti|RX\d{3,4}XT|RX \d{3,4}XT|RX\d{3,4} XT|RX \d{3,4} XT|RX\d{3,4}|RX \d{3,4}", text)
 
         if (not chipset):
             return None
         
-        return chipset[0].replace(" ", "")
+        return chipset[0].upper().replace(" ", "")
 
 
     def mb(self, text):
