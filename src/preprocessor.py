@@ -1,4 +1,7 @@
 import re
+import os
+from tqdm import tqdm
+from pymongo import MongoClient
 
 class RegexPreprocessor():
     '''데이터 정규식 전처리기'''
@@ -54,10 +57,10 @@ class RegexPreprocessor():
         else:
             regex_result = re.findall("\d{4,5}X|\d{4,5}G|\d{4,5}", text)
 
-        if regex_result:
-            return " ".join(regex_result)
-        else:
-            None
+        if not regex_result:
+            return None
+
+        return flag + " " + regex_result[0]
     
     def vga(self, text):
         # brand = re.findall("GAINWARD|이엠텍|MSI|ZOTAC|갤럭시|ASUS|GIGABYTE|PowerColor|리드텍|AFOX|AKiTiO|AMD|ARKTEK|ASRock|ATUM|AXLE|COLORFUL|EVGA|FORSA|HIS|INNO3D|MANLI|MAXSUN|NETSTOR|NVIDIA|PALIT|PNY|Razer|SAPPHIRE|SNK테크|SOYO|Sonnet|TAGER|XFX|레노버|매트록스|세컨드찬스|엠탑코리아", text)
@@ -71,12 +74,12 @@ class RegexPreprocessor():
 
     def mb(self, text):
         # brand = re.findall("ASRock|ASUS|MSI|GIGABYTE|ECS|AFOX|ASRock Rack|Arduino|BIOSTAR|COLORFUL|FOXCONN|JETWAY|Maxtang|Raspberry Pi|Supermicro|TYAN|디지탈그린텍|마이크로닉스|이엠텍|인텍앤컴퍼니|인텔|코코아팹", text)
-        chipset = re.findall("[A-Z]\d{2,3}\w+", text)
+        chipset = re.findall("\w\d{2,3}", text)
 
         if (not chipset):
             return None
         
-        return chipset[0]
+        return chipset[0].upper()
     
     def ram(self, text):
         # brand = re.findall("삼성전자|ADATA|G.SKILL|GeIL|ACPI|AFOX|AVEXIR|Antec|Apacer|CORSAIR|CYNEX|Dreamware|EKMEMORY|ESSENCORE|GIGABYTE|GLOWAY|GSMS|HP|INNO3D|KINGMAX|LANSON|OCPC|OLOy|PATRIOT|PNY|SK하이닉스|TeamGroup|Terabyte|V-Color|ZADAK|갤럭시|건평정보통신|디자인|마이크론|실리콘파워|써멀테이크|어드반|오존컴퍼니|이메이션|킹스톤|타무즈|트랜센드", text)
@@ -98,7 +101,7 @@ class RegexPreprocessor():
                 volume[idx] = int(volume[idx])
             volume[0] = str(max(volume)) + "GB"
 
-        return chipset[0] + " " + volume[0]
+        return volume[0]
 
     def ssd(self, text):
         # brand = re.findall("삼성전자|마이크론|ADATA|Western Digital|ACPI|AFOX|ASUS|AVEXIR|Apacer|Axxen|BIOSTAR|BIWIN|BLUE-I|COLORFUL|COOLERTEC|CORSAIR|CRAFT|DATARAM|DIGIFAST|DIGISTOR|EAGET|EKMEMORY|ESSENCORE|EVERCOOL|EXASCEND|FOXCONN|Faspeed|GIGABYTE|GLOWAY|GeIL|GrinMax|HGST|HIKVISION|HP|ICY DOCK|IPT|JEYI|KINGMAX|Kim MiDi|Kimtigo|KingDian|KingSpec|Korlet|Lexar|Lite-On|Longsys|MAIWO|MARSHAL|MK2|MUSHKIN|MiSD|MyDigitalSSD|MySSD|NCTOP|NOFAN|Netac|OCPC|OCZ SS|ORICO|OWC|PALIT|PATRIOT|PHINOCOM|PNY|Plextor|RAMIS|RiTEK|SK하이닉스|SONY|STARSWAY|STCOM|SUNEAST|Sandisk|Seagate|SilverStone|Supertalent|Synology|TCSUNBOW|TOPDISK|TeamGroup|Toshiba|UNITEK|Union Memory|VIA|Vaseky|VisionTek|ZOTAC|innoDisk", text)
@@ -121,3 +124,46 @@ class RegexPreprocessor():
             regex_result[0] = regex_result[0] + "W"
         
         return regex_result[0]
+
+
+class Mongo():
+    '''MongoDB Database Management'''
+
+    def __init__(self):
+        self.db_client = MongoClient(os.environ['COMTRIS_MONGODB_URI'])
+        self.db_cursor = self.db_client['COMTRIS']
+
+    def client(self):
+        '''DB client cursor 반환'''
+        return self.db_client
+    
+    def cursor(self):
+        '''RAAS cursor 반환'''
+        return self.db_cursor
+
+    def __del__(self):
+        self.db_client.close()
+
+
+if __name__ == "__main__":
+    db = Mongo()
+    rp = RegexPreprocessor()
+
+    for col in ['gallery', 'review', 'pc_quote']:
+        print(col + "Re Preprocessing...")
+        targets = list(db.cursor()[col].find({}, {'shop_date': 0, 'crawl_date': 0, 'id': 0, 'pass': 0}))
+        for idx in tqdm(range(len(targets))):
+            for key, value in targets[idx]['original'].items():
+                if key == "CPU":
+                    targets[idx]['CPU'] = rp.cpu(value)
+                elif key == "M/B" or key == "M/b":
+                    targets[idx]['M/B'] = rp.mb(value)
+                elif key == "RAM":
+                    targets[idx]['RAM'] = rp.ram(value)
+                elif key == "VGA":
+                    targets[idx]['VGA'] = rp.vga(value)
+                elif key == "SSD":
+                    targets[idx]['SSD'] = rp.ssd(value)
+                elif key == "POWER":
+                    targets[idx]['POWER'] = rp.power(value)
+            db.cursor()[col].update_one({'_id': targets[idx]['_id']}, {'$set': targets[idx]})
