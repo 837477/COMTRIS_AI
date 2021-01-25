@@ -52,7 +52,7 @@ class RegexPreprocessor():
         if flag == "INTEL":
             regex_result = re.findall("\d{4,5}KF|\d{4,5}K|\d{4,5}F|\d{4,5}X|\d{4,5}", text)
         else:
-            regex_result = re.findall("\d{4,5}X|\d{4,5}G", text)
+            regex_result = re.findall("\d{4,5}X|\d{4,5}G|\d{4,5}", text)
 
         if regex_result:
             return " ".join(regex_result)
