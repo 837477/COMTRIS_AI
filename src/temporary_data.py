@@ -1,3 +1,4 @@
+#-*-coding: utf-8-*-
 import os
 import numpy as np
 from pymongo import MongoClient
