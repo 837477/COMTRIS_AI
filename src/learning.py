@@ -37,32 +37,24 @@ db = Mongo()
 train_list = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
            + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
            + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
-
-total_data_cnt = len(train_list)
-learning_data_cnt = int(len(train_list) * 1)
-test_data_cnt = int(len(train_list) * 0.1)
-
-print("Total data count: {:d}".format(total_data_cnt))
-print("Learning data count: {:d}".format(learning_data_cnt))
-print("Test data count: {:d}\n".format(test_data_cnt))
 ##############################################################################
 
 
 # 데이터 전처리 #################################################################
-train_x_table = pd.DataFrame(train_list, columns=["VGA", "M/B", "RAM", "SSD", "POWER"])
+train_x_table = pd.DataFrame(train_list, columns=["VGA", "M/B", "RAM", "POWER"])
 train_y_table = pd.DataFrame(train_list, columns=["CPU"])
 
 # 학습 데이터 전처리
-train_x_set = FreqDist(np.hstack(train_x_table.values[:learning_data_cnt]))
+train_x_set = FreqDist(np.hstack(train_x_table.values[20:]))
 train_x_index = {x : idx for idx, x in enumerate(train_x_set)}
 x_train = []
-for tensor in train_x_table.values[:learning_data_cnt]:
+for tensor in train_x_table.values[20:]:
     x_train.append(list(map(train_x_index.get, tensor)))
 
-train_y_set = FreqDist(np.hstack(train_y_table.values[:learning_data_cnt]))
+train_y_set = FreqDist(np.hstack(train_y_table.values[20:]))
 train_y_index = {y : idx for idx, y in enumerate(train_y_set)}
 y_train = []
-for tensor in np.hstack(train_y_table.values[:learning_data_cnt]):
+for tensor in np.hstack(train_y_table.values[20:]):
     y_train.append(train_y_index[tensor])
 
 # 최종 학습 데이터 텐서 생성
@@ -83,7 +75,7 @@ print(train_y_index)
 
 # 학습 ########################################################################
 # 모델 초기화
-model = nn.Linear(5, len(train_y_index))
+model = nn.Linear(4, len(train_y_index))
 
 # optimizer 설정
 optimizer = optim.SGD(model.parameters(), lr=0.1)
@@ -112,16 +104,16 @@ for epoch in tqdm(range(epochs)):
 print("\nResult checking ...")
 x_test = []
 y_test = []
-for tensor in train_x_table.values[learning_data_cnt:]:
+for tensor in train_x_table.values[:20]:
     x_test.append(list(map(train_x_index.get, tensor)))
-for tensor in np.hstack(train_y_table.values[learning_data_cnt:]):
+for tensor in np.hstack(train_y_table.values[:20]):
     y_test.append(train_y_index[tensor])
 
 x_test = torch.FloatTensor(x_test)
 
 answer = 0
 fails = []
-for i in tqdm(range(test_data_cnt)):
+for i in tqdm(range(20)):
     fail = {}
     test = list(model(x_test[i]))
     prediction = test.index(max(test))
@@ -133,10 +125,10 @@ for i in tqdm(range(test_data_cnt)):
         fail['model'] = model(x_test[i])
         fails.append(fail)
 
-print("accuracy: {}% !".format((answer/test_data_cnt) * 100))
 for fail in fails:
     print("#" * 100)
     print("answer: {:d}".format(fail['answer']))
     print("prediction: {:d}".format(fail['prediction']))
     print(fail['model'])
+print("accuracy: {}% !".format((answer/20) * 100))
 ###############################################################################
