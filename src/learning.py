@@ -15,7 +15,7 @@ class Mongo():
     '''MongoDB Database Management'''
 
     def __init__(self):
-        self.db_client = MongoClient(os.environ['COMTRIS_MONGODB_URI'])
+        self.db_client = MongoClient(os.environ['COMTRIS_SERVER_MONGODB_URI'])
         self.db_cursor = self.db_client['COMTRIS']
 
     def client(self):
@@ -34,11 +34,13 @@ class Mongo():
 db = Mongo()
 
 # 학습 데이터 로드 ###############################################################
-train_list = list(db.cursor()['temporary_data'].find({}, {"_id": 0, "performance": 0}))
+train_list = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
+           + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
+           + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
 
 total_data_cnt = len(train_list)
-learning_data_cnt = int(len(train_list) * 0.7)
-test_data_cnt = int(len(train_list) * 0.3)
+learning_data_cnt = int(len(train_list) * 1)
+test_data_cnt = int(len(train_list) * 0.1)
 
 print("Total data count: {:d}".format(total_data_cnt))
 print("Learning data count: {:d}".format(learning_data_cnt))
