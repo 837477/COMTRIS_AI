@@ -5,6 +5,7 @@ import torch.optim as optim
 import os
 import pandas as pd
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
 from nltk import FreqDist
 from pymongo import MongoClient
 from tqdm import tqdm
@@ -30,86 +31,117 @@ class Mongo():
         self.db_client.close()
 
 
+
 # DB Manager 호출
 db = Mongo()
 
-# 학습 데이터 로드 ###############################################################
-train_list = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
+
+
+# 데이터 전처리  #################################################################
+train_data = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
            + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
            + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
-##############################################################################
 
+x_column = ["VGA", "M/B", "RAM", "POWER"]
+y_column = ["CPU"]
 
-# 데이터 전처리 #################################################################
-train_x_table = pd.DataFrame(train_list, columns=["VGA", "M/B", "RAM", "POWER"])
-train_y_table = pd.DataFrame(train_list, columns=["CPU"])
+# index 생성기
+x_index = {}
+for col in x_column:
+    part = pd.DataFrame(train_data, columns=[col])
+    temp = {}
+    index = 1.0
+    for part in set(np.hstack(part.values)):
+        temp[part] = index
+        index += 1
+    x_index.update(temp)
 
-# 학습 데이터 전처리
-train_x_set = FreqDist(np.hstack(train_x_table.values[20:]))
-train_x_index = {x : idx for idx, x in enumerate(train_x_set)}
-x_train = []
-for tensor in train_x_table.values[20:]:
-    x_train.append(list(map(train_x_index.get, tensor)))
+y_index = {}
+part = pd.DataFrame(train_data, columns=y_column)
+index = 0
+for name in set(np.hstack(part.values)):
+    y_index[name] = index
+    index += 1
 
-train_y_set = FreqDist(np.hstack(train_y_table.values[20:]))
-train_y_index = {y : idx for idx, y in enumerate(train_y_set)}
-y_train = []
-for tensor in np.hstack(train_y_table.values[20:]):
-    y_train.append(train_y_index[tensor])
+# 데이터 숫자 매핑
+x_table = pd.DataFrame(train_data, columns=x_column)
+x_data = []
+for tensor in x_table.values:
+    x_data.append(list(map(x_index.get, tensor)))
 
-# 최종 학습 데이터 텐서 생성
-x_train = torch.FloatTensor(x_train)
-y_train = torch.LongTensor(y_train)
+y_table = pd.DataFrame(train_data, columns=y_column)
+y_data = []
+for tensor in np.hstack(y_table.values):
+    y_data.append(y_index[tensor])
 
-# 데이터 확인
-print(train_x_table)
-print(train_y_table)
-print()
-print(x_train)
-print(y_train)
-print()
-print(train_x_index)
-print(train_y_index)
-##############################################################################
+# 최종 학습 데이터
+x_data = torch.FloatTensor(x_data)
+y_data = torch.LongTensor(y_data)
+
+class Data(Dataset):
+    def __init__(self):
+        self.x=torch.from_numpy(np.array(x_data))
+        self.y=torch.from_numpy(np.array(y_data))
+        self.len=self.x.shape[0]
+    def __getitem__(self,index):      
+        return self.x[index], self.y[index]
+    def __len__(self):
+        return self.len
+
+data_set = Data()
+trainloader = DataLoader(dataset=data_set, batch_size=64)
+#################################################################################
+
 
 
 # 학습 ########################################################################
 # 모델 초기화
-model = nn.Linear(4, len(train_y_index))
+class Net(nn.Module):
+    def __init__(self, D_in, H, D_out):
+        super(Net,self).__init__()
+        self.linear1=nn.Linear(D_in,H)
+        self.linear2=nn.Linear(H,D_out)
 
-# optimizer 설정
-optimizer = optim.SGD(model.parameters(), lr=0.1)
+    def forward(self,x):
+        x = torch.sigmoid(self.linear1(x))  
+        x = self.linear2(x)
+        return x
 
-epochs = 5000
+input_dim = len(x_column)         # how many Variables are in the dataset
+hidden_dim = len(y_index)*2       # hidden layers
+output_dim= len(y_index)          # number of classes
+learning_rate=0.1
+
+model = Net(input_dim, hidden_dim, output_dim)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+print('W:',list(model.parameters())[0].size())
+print('b',list(model.parameters())[1].size())
+
+epochs = 2000
+loss_list=[]
 for epoch in tqdm(range(epochs)):
-
-    # H(x) 계산
-    prediction = model(x_train)
-
-    # cost 계산
-    cost = F.cross_entropy(prediction, y_train)
-
-    # cost로 H(x) 개선
-    optimizer.zero_grad()
-    cost.backward()
-    optimizer.step()
-
-    # 100번마다 로그 출력
+    for x, y in trainloader:
+        #clear gradient 
+        optimizer.zero_grad()
+        prediction = model(x)
+        loss=criterion(prediction, y)
+        # calculate gradients of parameters 
+        loss.backward()
+        # update parameters 
+        optimizer.step()
+        
+        loss_list.append(loss.data)
     if epoch % 1000 == 0:
-        print('Cost: {:.6f}'.format(cost.item()))
+        print('epoch {}, loss {}'.format(epoch, loss.item()))
 ##############################################################################
 
 
 # 결과 확인 #####################################################################
 print("\nResult checking ...")
-x_test = []
-y_test = []
-for tensor in train_x_table.values[:20]:
-    x_test.append(list(map(train_x_index.get, tensor)))
-for tensor in np.hstack(train_y_table.values[:20]):
-    y_test.append(train_y_index[tensor])
-
-x_test = torch.FloatTensor(x_test)
+x_test = torch.FloatTensor(x_data)
+y_test = torch.LongTensor(y_data)
 
 answer = 0
 fails = []
