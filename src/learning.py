@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from nltk import FreqDist
 from pymongo import MongoClient
 from tqdm import tqdm
+from datetime import datetime
 
 torch.manual_seed(1)
 
@@ -42,7 +43,10 @@ train_data = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performan
            + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
            + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
 
-x_column = ["VGA", "M/B", "RAM", "POWER"]
+train_data = list(db.cursor()['temporary_data'].find())
+train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0}))
+
+x_column = ["M/B", "VGA", "SSD", "RAM", "POWER"]
 y_column = ["CPU"]
 
 # index 생성기
@@ -89,7 +93,7 @@ class Data(Dataset):
         return self.len
 
 data_set = Data()
-trainloader = DataLoader(dataset=data_set, batch_size=64)
+trainloader = DataLoader(dataset=data_set, batch_size=32)
 #################################################################################
 
 
@@ -97,29 +101,31 @@ trainloader = DataLoader(dataset=data_set, batch_size=64)
 # 학습 ########################################################################
 # 모델 초기화
 class Net(nn.Module):
-    def __init__(self, D_in, H, D_out):
+    def __init__(self, D_in, D_out):
         super(Net,self).__init__()
-        self.linear1=nn.Linear(D_in,H)
-        self.linear2=nn.Linear(H,D_out)
+        self.layer_1 = nn.Linear(D_in, D_out*2)
+        self.layer_out = nn.Linear(D_out*2, D_out)
+        self.relu = nn.ReLU()
 
-    def forward(self,x):
-        x = torch.sigmoid(self.linear1(x))  
-        x = self.linear2(x)
+    def forward(self, x):
+        x = self.layer_1(x)
+        x = self.relu(x)
+        x = self.layer_out(x) 
         return x
 
 input_dim = len(x_column)         # how many Variables are in the dataset
-hidden_dim = len(y_index)*2       # hidden layers
 output_dim= len(y_index)          # number of classes
-learning_rate=0.1
+learning_rate=0.01
 
-model = Net(input_dim, hidden_dim, output_dim)
+model = Net(input_dim, output_dim)
+# model = nn.Linear(input_dim, output_dim)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
 print('W:',list(model.parameters())[0].size())
 print('b',list(model.parameters())[1].size())
 
-epochs = 2000
+epochs = 10
 loss_list=[]
 for epoch in tqdm(range(epochs)):
     for x, y in trainloader:
@@ -133,8 +139,8 @@ for epoch in tqdm(range(epochs)):
         optimizer.step()
         
         loss_list.append(loss.data)
-    if epoch % 1000 == 0:
-        print('epoch {}, loss {}'.format(epoch, loss.item()))
+
+    print('epoch {}, loss {}'.format(epoch, loss.item()))
 ##############################################################################
 
 
@@ -145,7 +151,7 @@ y_test = torch.LongTensor(y_data)
 
 answer = 0
 fails = []
-for i in tqdm(range(20)):
+for i in tqdm(range(2000)):
     fail = {}
     test = list(model(x_test[i]))
     prediction = test.index(max(test))
@@ -157,10 +163,10 @@ for i in tqdm(range(20)):
         fail['model'] = model(x_test[i])
         fails.append(fail)
 
-for fail in fails:
-    print("#" * 100)
-    print("answer: {:d}".format(fail['answer']))
-    print("prediction: {:d}".format(fail['prediction']))
-    print(fail['model'])
-print("accuracy: {}% !".format((answer/20) * 100))
+# for fail in fails:
+#     print("#" * 100)
+#     print("answer: {:d}".format(fail['answer']))
+#     print("prediction: {:d}".format(fail['prediction']))
+#     print(fail['model'])
+print("accuracy: {}% !".format((answer/2000) * 100))
 ###############################################################################
