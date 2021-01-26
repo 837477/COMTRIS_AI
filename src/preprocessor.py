@@ -101,6 +101,9 @@ class RegexPreprocessor():
                 volume[idx] = int(volume[idx])
             volume[0] = str(max(volume)) + "GB"
 
+        if volume[0][-1] == "G":
+            volume[0] += "B"
+
         return volume[0]
 
     def ssd(self, text):
@@ -130,7 +133,7 @@ class Mongo():
     '''MongoDB Database Management'''
 
     def __init__(self):
-        self.db_client = MongoClient(os.environ['COMTRIS_MONGODB_URI'])
+        self.db_client = MongoClient(os.environ['COMTRIS_SERVER_MONGODB_URI'])
         self.db_cursor = self.db_client['COMTRIS']
 
     def client(self):
@@ -150,7 +153,7 @@ if __name__ == "__main__":
     rp = RegexPreprocessor()
 
     for col in ['gallery', 'review', 'pc_quote']:
-        print(col + "Re Preprocessing...")
+        print(col, "Re Preprocessing...")
         targets = list(db.cursor()[col].find({}, {'shop_date': 0, 'crawl_date': 0, 'id': 0, 'pass': 0}))
         for idx in tqdm(range(len(targets))):
             for key, value in targets[idx]['original'].items():
