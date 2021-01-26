@@ -63,35 +63,35 @@ class RegexPreprocessor():
         return flag + " " + regex_result[0]
     
     def vga(self, text):
-        # brand = re.findall("GAINWARD|이엠텍|MSI|ZOTAC|갤럭시|ASUS|GIGABYTE|PowerColor|리드텍|AFOX|AKiTiO|AMD|ARKTEK|ASRock|ATUM|AXLE|COLORFUL|EVGA|FORSA|HIS|INNO3D|MANLI|MAXSUN|NETSTOR|NVIDIA|PALIT|PNY|Razer|SAPPHIRE|SNK테크|SOYO|Sonnet|TAGER|XFX|레노버|매트록스|세컨드찬스|엠탑코리아", text)
+        brand = re.findall("GAINWARD|이엠텍|MSI|ZOTAC|갤럭시|ASUS|GIGABYTE|PowerColor|리드텍|AFOX|AKiTiO|AMD|ARKTEK|ASRock|ATUM|AXLE|COLORFUL|EVGA|FORSA|HIS|INNO3D|MANLI|MAXSUN|NETSTOR|NVIDIA|PALIT|PNY|Razer|SAPPHIRE|SNK테크|SOYO|Sonnet|TAGER|XFX|레노버|매트록스|세컨드찬스|엠탑코리아", text)
         chipset = re.findall("GTX\d{3,4}SUPER|GTX \d{3,4}SUPER|GTX\d{3,4} SUPER|GTX \d{3,4} SUPER|GTX\d{3,4}Ti|GTX \d{3,4}Ti|GTX\d{3,4} Ti|GTX \d{3,4} Ti|GTX\d{3,4}TI|GTX \d{3,4}TI|GTX\d{3,4} TI|GTX \d{3,4} TI|GTX\d{3,4}|GTX \d{3,4}|RTX\d{3,4}super|RTX \d{3,4}super|RTX\d{3,4} super|RTX \d{3,4} super|RTX\d{3,4}SUPER|RTX \d{3,4}SUPER|RTX\d{3,4} SUPER|RTX \d{3,4} SUPER|RTX\d{3,4}Ti|RTX \d{3,4}Ti|RTX\d{3,4} Ti|RTX \d{3,4} Ti|RTX\d{3,4}|RTX \d{3,4}|RX\d{3,4}XT|RX \d{3,4}XT|RX\d{3,4} XT|RX \d{3,4} XT|RX\d{3,4}|RX \d{3,4}", text)
 
-        if (not chipset):
+        if (not brand) or (not chipset):
             return None
         
-        return chipset[0].upper().replace(" ", "")
+        return brand[0].upper() + " " + chipset[0].upper().replace(" ", "")
 
 
     def mb(self, text):
-        # brand = re.findall("ASRock|ASUS|MSI|GIGABYTE|ECS|AFOX|ASRock Rack|Arduino|BIOSTAR|COLORFUL|FOXCONN|JETWAY|Maxtang|Raspberry Pi|Supermicro|TYAN|디지탈그린텍|마이크로닉스|이엠텍|인텍앤컴퍼니|인텔|코코아팹", text)
-        chipset = re.findall("\w\d{2,3}", text)
+        brand = re.findall("ASRock|ASUS|MSI|GIGABYTE|ECS|AFOX|ASRock Rack|Arduino|BIOSTAR|COLORFUL|FOXCONN|JETWAY|Maxtang|Raspberry Pi|Supermicro|TYAN|디지탈그린텍|마이크로닉스|이엠텍|인텍앤컴퍼니|인텔|코코아팹", text)
+        chipset = re.findall("\w\d{2,3}\w", text)
 
-        if (not chipset):
+        if (not brand) or (not chipset):
             return None
         
-        return chipset[0].upper()
+        return brand[0].upper() + " " + chipset[0].upper()
     
     def ram(self, text):
-        # brand = re.findall("삼성전자|ADATA|G.SKILL|GeIL|ACPI|AFOX|AVEXIR|Antec|Apacer|CORSAIR|CYNEX|Dreamware|EKMEMORY|ESSENCORE|GIGABYTE|GLOWAY|GSMS|HP|INNO3D|KINGMAX|LANSON|OCPC|OLOy|PATRIOT|PNY|SK하이닉스|TeamGroup|Terabyte|V-Color|ZADAK|갤럭시|건평정보통신|디자인|마이크론|실리콘파워|써멀테이크|어드반|오존컴퍼니|이메이션|킹스톤|타무즈|트랜센드", text)
+        brand = re.findall("삼성전자|ADATA|G.SKILL|GeIL|ACPI|AFOX|AVEXIR|Antec|Apacer|CORSAIR|CYNEX|Dreamware|EKMEMORY|ESSENCORE|GIGABYTE|GLOWAY|GSMS|HP|INNO3D|KINGMAX|LANSON|OCPC|OLOy|PATRIOT|PNY|SK하이닉스|TeamGroup|Terabyte|V-Color|ZADAK|갤럭시|건평정보통신|디자인|마이크론|실리콘파워|써멀테이크|어드반|오존컴퍼니|이메이션|킹스톤|타무즈|트랜센드", text)
         chipset = re.findall("\d{5}|\d{4}", text)
         volume = re.findall("\d{1,2}GB|\d{1,2}gb|\d{1,2}G|\d{1,2}g", text)
 
-        if (not chipset) or (not volume):
+        if (not brand) or (not volume):
             return None
         
         # 칩셋 재가공
-        if len(chipset[0]) == 5:
-            chipset[0] = self.ram_clock[chipset[0]]
+        # if len(chipset[0]) == 5:
+        #     chipset[0] = self.ram_clock[chipset[0]]
 
         # 용량 재가공
         if len(volume) >= 2:
@@ -104,7 +104,7 @@ class RegexPreprocessor():
         if volume[0][-1] == "G":
             volume[0] += "B"
 
-        return volume[0]
+        return brand[0] + " " + volume[0]
 
     def ssd(self, text):
         # brand = re.findall("삼성전자|마이크론|ADATA|Western Digital|ACPI|AFOX|ASUS|AVEXIR|Apacer|Axxen|BIOSTAR|BIWIN|BLUE-I|COLORFUL|COOLERTEC|CORSAIR|CRAFT|DATARAM|DIGIFAST|DIGISTOR|EAGET|EKMEMORY|ESSENCORE|EVERCOOL|EXASCEND|FOXCONN|Faspeed|GIGABYTE|GLOWAY|GeIL|GrinMax|HGST|HIKVISION|HP|ICY DOCK|IPT|JEYI|KINGMAX|Kim MiDi|Kimtigo|KingDian|KingSpec|Korlet|Lexar|Lite-On|Longsys|MAIWO|MARSHAL|MK2|MUSHKIN|MiSD|MyDigitalSSD|MySSD|NCTOP|NOFAN|Netac|OCPC|OCZ SS|ORICO|OWC|PALIT|PATRIOT|PHINOCOM|PNY|Plextor|RAMIS|RiTEK|SK하이닉스|SONY|STARSWAY|STCOM|SUNEAST|Sandisk|Seagate|SilverStone|Supertalent|Synology|TCSUNBOW|TOPDISK|TeamGroup|Toshiba|UNITEK|Union Memory|VIA|Vaseky|VisionTek|ZOTAC|innoDisk", text)
