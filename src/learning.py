@@ -39,32 +39,40 @@ db = Mongo()
 
 
 # 데이터 전처리  #################################################################
-train_data = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
-           + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
-           + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
+# train_data = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
+#            + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
+#            + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
 
-train_data = list(db.cursor()['temporary_data'].find())
-train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0}))
+# train_data = list(db.cursor()['temporary_data'].find())
+train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0}))
+# train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "status": "거래성사"}, {"_id": 0, "performance": 0}).limit(10000)) * 100
+# train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "status": "거래성사", "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0})) * 200
 
 x_column = ["M/B", "VGA", "SSD", "RAM", "POWER"]
 y_column = ["CPU"]
 
 # index 생성기
 x_index = {}
+x_convert = {}
 for col in x_column:
     part = pd.DataFrame(train_data, columns=[col])
-    temp = {}
-    index = 1.0
-    for part in set(np.hstack(part.values)):
-        temp[part] = index
+    temp1 = {}
+    temp2 = {}
+    index = 1
+    for name in set(np.hstack(part.values)):
+        temp1[name] = index
+        temp2[index] = name
         index += 1
-    x_index.update(temp)
+    x_index.update(temp1)
+    x_convert[col] = temp2
 
 y_index = {}
+y_convert = {}
 part = pd.DataFrame(train_data, columns=y_column)
 index = 0
 for name in set(np.hstack(part.values)):
     y_index[name] = index
+    y_convert[index] = name
     index += 1
 
 # 데이터 숫자 매핑
@@ -122,10 +130,7 @@ model = Net(input_dim, output_dim)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
-print('W:',list(model.parameters())[0].size())
-print('b',list(model.parameters())[1].size())
-
-epochs = 10
+epochs = 40000
 loss_list=[]
 for epoch in tqdm(range(epochs)):
     for x, y in trainloader:
@@ -139,6 +144,9 @@ for epoch in tqdm(range(epochs)):
         optimizer.step()
         
         loss_list.append(loss.data)
+    
+    if loss.item() < 0.1:
+        break
 
     print('epoch {}, loss {}'.format(epoch, loss.item()))
 ##############################################################################
@@ -154,19 +162,22 @@ fails = []
 for i in tqdm(range(2000)):
     fail = {}
     test = list(model(x_test[i]))
+    print(model(x_test[i]))
     prediction = test.index(max(test))
-    if y_test[i] == prediction:
+    if y_test[i].item() == prediction:
         answer += 1
-    else:
-        fail['answer'] = y_test[i]
-        fail['prediction'] = prediction
-        fail['model'] = model(x_test[i])
-        fails.append(fail)
-
-# for fail in fails:
-#     print("#" * 100)
-#     print("answer: {:d}".format(fail['answer']))
-#     print("prediction: {:d}".format(fail['prediction']))
-#     print(fail['model'])
 print("accuracy: {}% !".format((answer/2000) * 100))
+
+
+for i in range(5):
+    test = list(model(x_test[i]))
+    prediction = test.index(max(test))
+
+    for idx, name in enumerate(x_column):
+        print(x_convert[name][int(x_test[i][idx].item())])
+    print("-"* 30)
+    print("Answer: {}".format(y_convert[y_test[i].item()]))
+    print("Prediction: {}".format(y_convert[prediction]))
+    print("#" * 100)
+
 ###############################################################################
