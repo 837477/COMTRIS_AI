@@ -7,36 +7,14 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from nltk import FreqDist
-from pymongo import MongoClient
 from tqdm import tqdm
 from datetime import datetime
+from db_connection import Mongo
 
 torch.manual_seed(1)
 
-class Mongo():
-    '''MongoDB Database Management'''
-
-    def __init__(self):
-        self.db_client = MongoClient(os.environ['COMTRIS_SERVER_MONGODB_URI'])
-        self.db_cursor = self.db_client['COMTRIS']
-
-    def client(self):
-        '''DB client cursor 반환'''
-        return self.db_client
-    
-    def cursor(self):
-        '''RAAS cursor 반환'''
-        return self.db_cursor
-
-    def __del__(self):
-        self.db_client.close()
-
-
-
 # DB Manager 호출
 db = Mongo()
-
-
 
 # 데이터 전처리  #################################################################
 train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0}))
