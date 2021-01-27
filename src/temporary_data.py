@@ -1,27 +1,8 @@
 #-*-coding: utf-8-*-
 import os
 import numpy as np
-from pymongo import MongoClient
 from tqdm import tqdm
-
-
-class Mongo():
-    '''MongoDB Database Management'''
-
-    def __init__(self):
-        self.db_client = MongoClient(os.environ['COMTRIS_SERVER_MONGODB_URI'])
-        self.db_cursor = self.db_client['COMTRIS']
-
-    def client(self):
-        '''DB client cursor 반환'''
-        return self.db_client
-    
-    def cursor(self):
-        '''RAAS cursor 반환'''
-        return self.db_cursor
-
-    def __del__(self):
-        self.db_client.close()
+from db_connection import Mongo
 
 
 def create_temporary_data():
