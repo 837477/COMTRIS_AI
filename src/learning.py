@@ -39,11 +39,6 @@ db = Mongo()
 
 
 # 데이터 전처리  #################################################################
-# train_data = list(db.cursor()['gallery'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
-#            + list(db.cursor()['pc_quote'].find({"pass": 1}, {"_id": 0, "performance": 0})) \
-#            + list(db.cursor()['review'].find({"pass": 1}, {"_id": 0, "performance": 0}))
-
-# train_data = list(db.cursor()['temporary_data'].find())
 train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0}))
 # train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "status": "거래성사"}, {"_id": 0, "performance": 0}).limit(10000)) * 100
 # train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "status": "거래성사", "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0})) * 200
@@ -173,6 +168,7 @@ for i in range(5):
     test = list(model(x_test[i]))
     prediction = test.index(max(test))
 
+    print("Input: ")
     for idx, name in enumerate(x_column):
         print(x_convert[name][int(x_test[i][idx].item())])
     print("-"* 30)
