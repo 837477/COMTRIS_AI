@@ -16,9 +16,16 @@ torch.manual_seed(1)
 db = Mongo()
 
 # 데이터 전처리  #################################################################
-train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0}))
-# train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "status": "거래성사"}, {"_id": 0, "performance": 0}).limit(10000)) * 100
-# train_data = list(db.cursor()['pc_quote'].find({"pass": 1, "status": "거래성사", "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}, {"_id": 0, "performance": 0})) * 200
+db_result = list(db.cursor()['pc_quote'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
+# train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
+
+
+train_data = []
+for data in db_result:
+    for check in ["AMD"]:
+        if check in data['CPU']:
+            train_data.append(data)
+print(len(train_data))
 
 x_column = ["M/B", "VGA", "SSD", "RAM", "POWER"]
 y_column = ["CPU"]
@@ -73,7 +80,7 @@ class Data(Dataset):
         return self.len
 
 data_set = Data()
-trainloader = DataLoader(dataset=data_set, batch_size=32)
+trainloader = DataLoader(dataset=data_set, batch_size=16)
 #################################################################################
 
 
@@ -102,9 +109,9 @@ model = Net(input_dim, output_dim)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
-epochs = 40000
-loss_list=[]
-for epoch in tqdm(range(epochs)):
+
+epochs = 10000
+for epoch in range(epochs):
     for x, y in trainloader:
         #clear gradient 
         optimizer.zero_grad()
@@ -114,13 +121,12 @@ for epoch in tqdm(range(epochs)):
         loss.backward()
         # update parameters 
         optimizer.step()
-        
-        loss_list.append(loss.data)
-    
+
     if loss.item() < 0.1:
         break
 
-    print('epoch {}, loss {}'.format(epoch, loss.item()))
+    if epoch % 1000 == 0:
+        print('epoch {}, loss {}'.format(epoch, loss.item()))
 ##############################################################################
 
 
@@ -130,15 +136,12 @@ x_test = torch.FloatTensor(x_data)
 y_test = torch.LongTensor(y_data)
 
 answer = 0
-fails = []
-for i in tqdm(range(2000)):
-    fail = {}
+for i in tqdm(range(100)):
     test = list(model(x_test[i]))
-    print(model(x_test[i]))
     prediction = test.index(max(test))
     if y_test[i].item() == prediction:
         answer += 1
-print("accuracy: {}% !".format((answer/2000) * 100))
+print("accuracy: {}% !".format((answer/100) * 100))
 
 
 for i in range(5):
