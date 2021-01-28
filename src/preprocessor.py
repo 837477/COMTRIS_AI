@@ -1,5 +1,4 @@
 import re
-import os
 from tqdm import tqdm
 from db_connection import Mongo
 
@@ -96,8 +95,10 @@ class RegexPreprocessor():
         # 용량 재가공
         if len(volume) >= 2:
             for idx, value in enumerate(volume):
-                volume[idx] = value.replace("GB", "")
+                volume[idx] = volume[idx].replace("GB", "")
                 volume[idx] = volume[idx].replace("G", "")
+                volume[idx] = volume[idx].replace("gb", "")
+                volume[idx] = volume[idx].replace("g", "")
                 volume[idx] = int(volume[idx])
             volume[0] = str(max(volume)) + "GB"
 
@@ -137,17 +138,37 @@ if __name__ == "__main__":
         print(col, "Re Preprocessing...")
         targets = list(db.cursor()[col].find({}, {'shop_date': 0, 'crawl_date': 0, 'id': 0, 'pass': 0}))
         for idx in tqdm(range(len(targets))):
+            targets[idx]['join'] = []
+            targets[idx]['original_join'] = []
             for key, value in targets[idx]['original'].items():
                 if key == "CPU":
-                    targets[idx]['CPU'] = rp.cpu(value)
+                    regex_result = rp.cpu(value)
+                    targets[idx]['CPU'] = regex_result
+                    targets[idx]['join'].append(regex_result)
+                    targets[idx]['original_join'].append(value)
                 elif key == "M/B" or key == "M/b":
-                    targets[idx]['M/B'] = rp.mb(value)
+                    regex_result = rp.mb(value)
+                    targets[idx]['M/B'] = regex_result
+                    targets[idx]['join'].append(regex_result)
+                    targets[idx]['original_join'].append(value)
                 elif key == "RAM":
-                    targets[idx]['RAM'] = rp.ram(value)
+                    regex_result = rp.ram(value)
+                    targets[idx]['RAM'] = regex_result
+                    targets[idx]['join'].append(regex_result)
+                    targets[idx]['original_join'].append(value)
                 elif key == "VGA":
-                    targets[idx]['VGA'] = rp.vga(value)
+                    regex_result = rp.vga(value)
+                    targets[idx]['VGA'] = regex_result
+                    targets[idx]['join'].append(regex_result)
+                    targets[idx]['original_join'].append(value)
                 elif key == "SSD":
-                    targets[idx]['SSD'] = rp.ssd(value)
+                    regex_result = rp.ssd(value)
+                    targets[idx]['SSD'] = regex_result
+                    targets[idx]['join'].append(regex_result)
+                    targets[idx]['original_join'].append(value)
                 elif key == "POWER":
-                    targets[idx]['POWER'] = rp.power(value)
+                    regex_result = rp.power(value)
+                    targets[idx]['POWER'] = regex_result
+                    targets[idx]['join'].append(regex_result)
+                    targets[idx]['original_join'].append(value)
             db.cursor()[col].update_one({'_id': targets[idx]['_id']}, {'$set': targets[idx]})
