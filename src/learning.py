@@ -5,7 +5,6 @@ import torch.optim as optim
 import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from nltk import FreqDist
 from tqdm import tqdm
 from datetime import datetime
 from db_connection import Mongo
@@ -16,9 +15,9 @@ torch.manual_seed(1)
 db = Mongo()
 
 # 데이터 전처리  #################################################################
-db_result = list(db.cursor()['pc_quote'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
+# db_result = list(db.cursor()['pc_quote'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
 # train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
-
+db_result = list(db.cursor()['pc_quote'].find({"pass": 1}))
 
 train_data = []
 for data in db_result:
@@ -111,7 +110,7 @@ optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
 
 epochs = 10000
-for epoch in range(epochs):
+for epoch in tqdm(range(epochs)):
     for x, y in trainloader:
         #clear gradient 
         optimizer.zero_grad()
