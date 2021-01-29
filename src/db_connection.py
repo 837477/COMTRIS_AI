@@ -5,7 +5,8 @@ class Mongo():
     '''MongoDB Database Management'''
 
     def __init__(self):
-        self.db_client = MongoClient(os.environ['COMTRIS_SERVER_MONGODB_URI'])
+        self.db_client = MongoClient(os.environ['COMTRIS_MONGODB_URI'])
+        print(self.db_client)
         self.db_cursor = self.db_client['COMTRIS']
 
     def client(self):
