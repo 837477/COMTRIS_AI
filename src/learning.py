@@ -45,7 +45,7 @@ y_column = ["CPU"]
 
 db = MongoClient(os.environ['COMTRIS_MONGODB_URI'])['COMTRIS']
 
-date = datetime.strptime('2020-10-01', '%Y-%m-%d')
+date = datetime.strptime('2020-11-01', '%Y-%m-%d')
 train_data = list(db['gallery'].find({"pass": 1, "shop_date": {'$gt': date}}))\
            + list(db['pc_qoute'].find({"pass": 1, "shop_date": {'$gt': date}}))\
            + list(db['review'].find({"pass": 1, "shop_date": {'$gt': date}}))
@@ -117,7 +117,7 @@ model = Net(input_dim, output_dim)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
-epochs = 100
+epochs = 2000
 for epoch in tqdm(range(epochs)):
     for x, y in trainloader:
         #clear gradient 
@@ -131,6 +131,15 @@ for epoch in tqdm(range(epochs)):
 
     if epoch % 100 == 0:
         print('epoch {}, loss {}'.format(epoch, loss.item()))
+
+# needs 저장
+needs = db['master_config'].find_one({"key": "needs"})
+if not needs:
+    db['master_config'].insert_one({"key": "needs", "value": {}})
+    needs = {}
+if y_column[0] not in needs:
+    needs[y_column[0]] = x_column
+db['master_config'].update_one({"key": "needs"}, {"$set": {"value": needs}})
 
 # 모델 저장
 if y_column[0] == "M/B":
