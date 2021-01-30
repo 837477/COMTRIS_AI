@@ -1,6 +1,6 @@
 import os
 from gensim.models import Word2Vec, KeyedVectors, FastText
-from db_connection import Mongo
+from db import Mongo
 
 DB = Mongo()
 
@@ -10,7 +10,7 @@ result = [post['join'] for post in db_result]
 
 
 #### HyperParameter
-vec_size = 20
+vec_size = 6
 windows = 6
 min_count = 10
 iteration = 100

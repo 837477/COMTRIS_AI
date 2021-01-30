@@ -1,75 +1,21 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
 import numpy as np
+from pymongo import MongoClient
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from datetime import datetime
-from db_connection import Mongo
+
 
 torch.manual_seed(1)
 
-# DB Manager 호출
-db = Mongo()
-
-# 데이터 전처리  #################################################################
-# db_result = list(db.cursor()['pc_quote'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
-# train_data = list(db.cursor()['gallery'].find({"pass": 1, "shop_date": {'$gt': datetime.strptime('2021-01-01', '%Y-%m-%d')}}))
-db_result = list(db.cursor()['pc_quote'].find({"pass": 1}))
-
-train_data = []
-for data in db_result:
-    for check in ["AMD"]:
-        if check in data['CPU']:
-            train_data.append(data)
-print(len(train_data))
-
-x_column = ["M/B", "VGA", "SSD", "RAM", "POWER"]
-y_column = ["CPU"]
-
-# index 생성기
-x_index = {}
-x_convert = {}
-for col in x_column:
-    part = pd.DataFrame(train_data, columns=[col])
-    temp1 = {}
-    temp2 = {}
-    index = 1
-    for name in set(np.hstack(part.values)):
-        temp1[name] = index
-        temp2[index] = name
-        index += 1
-    x_index.update(temp1)
-    x_convert[col] = temp2
-
-y_index = {}
-y_convert = {}
-part = pd.DataFrame(train_data, columns=y_column)
-index = 0
-for name in set(np.hstack(part.values)):
-    y_index[name] = index
-    y_convert[index] = name
-    index += 1
-
-# 데이터 숫자 매핑
-x_table = pd.DataFrame(train_data, columns=x_column)
-x_data = []
-for tensor in x_table.values:
-    x_data.append(list(map(x_index.get, tensor)))
-
-y_table = pd.DataFrame(train_data, columns=y_column)
-y_data = []
-for tensor in np.hstack(y_table.values):
-    y_data.append(y_index[tensor])
-
-# 최종 학습 데이터
-x_data = torch.FloatTensor(x_data)
-y_data = torch.LongTensor(y_data)
 
 class Data(Dataset):
-    def __init__(self):
+    def __init__(self, x_data, y_data):
         self.x=torch.from_numpy(np.array(x_data))
         self.y=torch.from_numpy(np.array(y_data))
         self.len=self.x.shape[0]
@@ -78,14 +24,7 @@ class Data(Dataset):
     def __len__(self):
         return self.len
 
-data_set = Data()
-trainloader = DataLoader(dataset=data_set, batch_size=16)
-#################################################################################
 
-
-
-# 학습 ########################################################################
-# 모델 초기화
 class Net(nn.Module):
     def __init__(self, D_in, D_out):
         super(Net,self).__init__()
@@ -99,17 +38,86 @@ class Net(nn.Module):
         x = self.layer_out(x) 
         return x
 
-input_dim = len(x_column)         # how many Variables are in the dataset
-output_dim= len(y_index)          # number of classes
-learning_rate=0.01
+
+# 데이터 전처리 ##################################################################
+x_column = ["VGA", "M/B", "RAM", "SSD", "POWER"]
+y_column = ["CPU"]
+
+db = MongoClient(os.environ['COMTRIS_MONGODB_URI'])['COMTRIS']
+
+date = datetime.strptime('2020-10-01', '%Y-%m-%d')
+train_data = list(db['gallery'].find({"pass": 1, "shop_date": {'$gt': date}}))\
+           + list(db['pc_qoute'].find({"pass": 1, "shop_date": {'$gt': date}}))\
+           + list(db['review'].find({"pass": 1, "shop_date": {'$gt': date}}))
+print("학습 데이터 개수: {:d}".format(len(train_data)))
+
+
+# index 생성기
+index_dict = {}
+for col in ["CPU", "VGA", "M/B", "RAM", "SSD", "POWER"]:
+    part = pd.DataFrame(train_data, columns=[col])
+    part_list = list(set(np.hstack(part.values)))
+    part_list.sort()
+
+    part_to_index = {}
+    index_to_part = {}
+    index = 0
+    for part_name in part_list:
+        part_to_index[part_name] = str(index)
+        index_to_part[str(index)] = part_name
+        index += 1
+
+    value = {
+        "value": {
+            "part_to_index": part_to_index,
+            "index_to_part": index_to_part
+        }
+    }
+    index_dict[col] = value['value']
+    db['master_config'].update_one({"key": col + "_dict"}, {"$set": value}, upsert=True)
+index = {}
+for part in index_dict:
+    for p_i in index_dict[part]["part_to_index"]:
+        index_dict[part]["part_to_index"][p_i] = int(index_dict[part]["part_to_index"][p_i])
+    index.update(index_dict[part]["part_to_index"])
+
+
+# 데이터 숫자 매핑
+x_table = pd.DataFrame(train_data, columns=x_column)
+x_data = []
+for tensor in x_table.values:
+    x_data.append(list(map(index.get, tensor)))
+
+y_table = pd.DataFrame(train_data, columns=y_column)
+y_data = []
+for tensor in np.hstack(y_table.values):
+    y_data.append(index[tensor])
+
+# 최종 학습 데이터 준비
+x_data = torch.FloatTensor(x_data)
+y_data = torch.LongTensor(y_data)
+data_set = Data(x_data, y_data)
+trainloader = DataLoader(dataset=data_set, batch_size=32)
+
+
+print("학습 데이터 개수: {:d}".format(len(train_data)))
+print(x_data)
+print(y_data)
+
+
+# 학습 ########################################################################
+# Hyper params
+input_dim = len(x_column)
+part = pd.DataFrame(train_data, columns=y_column)
+output_dim = len(set(np.hstack(part.values)))
+
+learning_rate=0.02
 
 model = Net(input_dim, output_dim)
-# model = nn.Linear(input_dim, output_dim)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
-
-epochs = 10000
+epochs = 100
 for epoch in tqdm(range(epochs)):
     for x, y in trainloader:
         #clear gradient 
@@ -121,38 +129,11 @@ for epoch in tqdm(range(epochs)):
         # update parameters 
         optimizer.step()
 
-    if loss.item() < 0.1:
-        break
-
-    if epoch % 1000 == 0:
+    if epoch % 100 == 0:
         print('epoch {}, loss {}'.format(epoch, loss.item()))
-##############################################################################
 
-
-# 결과 확인 #####################################################################
-print("\nResult checking ...")
-x_test = torch.FloatTensor(x_data)
-y_test = torch.LongTensor(y_data)
-
-answer = 0
-for i in tqdm(range(100)):
-    test = list(model(x_test[i]))
-    prediction = test.index(max(test))
-    if y_test[i].item() == prediction:
-        answer += 1
-print("accuracy: {}% !".format((answer/100) * 100))
-
-
-for i in range(5):
-    test = list(model(x_test[i]))
-    prediction = test.index(max(test))
-
-    print("Input: ")
-    for idx, name in enumerate(x_column):
-        print(x_convert[name][int(x_test[i][idx].item())])
-    print("-"* 30)
-    print("Answer: {}".format(y_convert[y_test[i].item()]))
-    print("Prediction: {}".format(y_convert[prediction]))
-    print("#" * 100)
-
-###############################################################################
+# 모델 저장
+if y_column[0] == "M/B":
+    y_column[0] = "MB"
+PATH = "./model/" + y_column[0]
+torch.save(model, PATH)
